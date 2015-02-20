@@ -1,0 +1,158 @@
+#!/bin/bash
+
+hostspath="/etc/hosts"
+hostspathbck="/etc/myhost"
+vhostdir="/etc/"
+
+#cat $hostspath > $hostspathbck
+
+function interactive()
+{
+	echo ""
+	echo "## virtualhost wizard ##"
+	echo "## untuk keperluan local development ##"
+	echo "## bruri@gi.co.id ##"
+	echo ""
+	echo -n "Host : "
+	read host
+	echo -n "Direktori web : "
+	read webdir
+	echo ""
+	addhost $host $webdir
+	echo " ... $host sudah mengarah ke $webdir"
+	echo ""
+	#cat $hostspath
+}
+
+
+function addhost()
+{
+	# add host
+	sudo echo "127.0.0.1 	$1" >> $hostspath;
+	#add virtualhost config
+	cat > "/etc/apache2/sites-available/$1" <<EOL
+<VirtualHost *:80>
+    ServerName $1 
+    #ServerAlias www.$1
+    DocumentRoot $2
+    #ErrorLog ${APACHE_LOG_DIR}/error.log
+    #CustomLog ${APACHE_LOG_DIR}/access.log combined
+
+    <Directory $2 >
+                Options Indexes FollowSymLinks MultiViews
+                AllowOverride all
+                Options -Indexes
+                Order allow,deny
+                allow from all
+    </Directory>
+
+</VirtualHost>
+EOL
+	#activate and restart
+	echo ":: Activate vhost"
+	sudo a2ensite $1
+	echo " ... activate successfully"
+	sudo service apache2 restart
+	echo ""
+	echo ":: Adding complete "
+}
+
+function delhost(){
+	if [ -z $1 ]; then
+		echo "nama host belum diisi"
+	else
+		str='/'$1'/d'
+		x=`sed $str $hostspath` 
+		echo "$x" > $hostspath
+		echo ":: Deactivate vhost"
+		sudo a2dissite $1
+		echo " ... Deactivate successfully"
+		echo " ... Delete Configuration"
+		sudo rm "/etc/apache2/sites-available/$1"
+		echo " ... Configuration deleted"
+		sudo service apache2 restart
+		echo ""
+		echo ":: Delete Complete"
+	fi	
+}
+
+function test(){
+	echo "testa"
+}
+
+
+function backup(){
+	cat /etc/hosts >> /etc/myhost
+	echo ":: hosts backup successfuly"
+}
+
+function restore(){
+	cat /etc/myhost >> /etc/hosts
+	echo ":: hosts restore successfuly"
+}
+
+function install(){
+	cp "$0" /usr/bin
+	echo ":: install mkvhost successfuly"
+}
+
+function selfdelete(){
+	rm -- "$0"
+}
+
+
+clear
+
+if [ $1 = "install" ]; then
+	install
+fi
+
+if [ $1 = "-i" ]; then
+	interactive
+fi
+
+if [ $1 = "-b" ]; then
+	backup
+fi
+
+if [ $1 = "-r" ]; then
+	restore
+fi
+
+if [ $1 = "-d" ]; then
+	delhost $2
+fi
+
+if [ $1 = "-t" ]; then
+	test $2 $3
+fi
+
+if [ $1 = "-v" ]; then
+	echo "$hostspath : "
+	echo ""
+	cat $hostspath
+	echo ""
+fi
+
+if [ $1 = "--help" ]; then
+	cat <<EOL
+
+Penggunaan: mkvhost [OPTION]
+Tool bantuan untuk membuat virtualhost.
+
+Mandatory arguments 
+  -i Mode interaktif
+  -v Melihat host yang sudah dibuat
+  -d menghapus virtualhost contoh : -d sapi.com 
+  -b backup file /etc/hosts
+  -r restore file /etc/hosts
+      --help     menampilkan bantuan
+      
+      install  install ke /usr/bin
+
+Report mkvhost bugs to bruri@gi.co.id
+GNU coreutils home page: <http://www.gnu.org/software/coreutils/>
+General help using GNU software: <http://www.gnu.org/gethelp/>
+
+EOL
+fi
