@@ -30,7 +30,7 @@ function addhost()
 	# add host
 	sudo echo "127.0.0.1 	$1" >> $hostspath;
 	#add virtualhost config
-	cat > "/etc/apache2/sites-available/$1" <<EOL
+	cat > "/etc/apache2/sites-available/$1.conf" <<EOL
 <VirtualHost *:80>
     ServerName $1 
     #ServerAlias www.$1
